@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { IDataGridStore } from '../providers';
 import { connectStore } from '../hoc';
-import { isNumber, uniqBy } from '../utils';
+import { isNumber, uniqBy, isFunction } from '../utils';
 import DataGridColumnFilterOption from './DataGridColumnFilterOption';
 import { DispatchTypes } from '../common/@enums';
+import { formatterFunction } from '../common/@types';
 
 interface IProps extends IDataGridStore {}
 interface IState {}
@@ -89,6 +90,7 @@ class DatagridColumnFilter extends React.Component<IProps, IState> {
       scrollLeft = 0,
       filterInfo = {},
       data = [],
+      predefinedFormatter,
     } = this.props;
     const { columnKeys: optionColumnKeys = {} } = options;
     const { bodyHeight = 0 } = styles;
@@ -110,6 +112,7 @@ class DatagridColumnFilter extends React.Component<IProps, IState> {
           let value = item[colGroup[isColumnFilter as number].key || ''];
           let text: string = value;
           let checked: boolean = false;
+          let formatter = colGroup[isColumnFilter as number].formatter;
 
           if (typeof value === 'undefined') {
             value = '_UNDEFINED_';
@@ -133,11 +136,30 @@ class DatagridColumnFilter extends React.Component<IProps, IState> {
             checked = columnFilterInfo._CHECK_ALL_;
           }
 
+          const formatterData = {
+            value,
+            text,
+            // checked,
+          };
+
+          if (typeof predefinedFormatter === 'undefined') {
+          } else if (
+            typeof formatter === 'string' &&
+            formatter in predefinedFormatter
+          ) {
+            text = predefinedFormatter[formatter](formatterData);
+          } else if (isFunction(formatter)) {
+            text = (formatter as formatterFunction)(formatterData);
+          }
+
           return {
             value: value,
             text: text,
             checked: checked,
           };
+        })
+        .sort((a, b) => {
+          return +(a.value > b.value) || +(a.value === b.value) - 1;
         }),
       'value',
     );
